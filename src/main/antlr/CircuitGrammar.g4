@@ -2,6 +2,8 @@ grammar CircuitGrammar;
 
 LPARENTH : '(' ;
 RPARENTH : ')' ;
+LCPARENTH : '{' ;
+RCPARENTH : '}' ;
 
 NOT : 'not' ;
 AND : 'and' ;
@@ -15,11 +17,11 @@ EQ : '=' ;
 SEMI : ';' ;
 
 BOOL : [0-1] ;
-ID : [a-z]+ ;
+ID : [a-zA-Z_][a-zA-Z_0-9]* ;
 WS : [ \t\r\n] -> skip ;
 
 program
-    : (statement)+ EOF
+    : (component_definition)* main_component EOF
     | EOF
     ;
 
@@ -27,28 +29,41 @@ block
     : LCPARENTH (statement)* RCPARENTH
     ;
 
+main_component
+    : 'main' component_definition
+    ;
+
+component_definition
+    : 'component' name=ID LPARENTH (input_declaration)+ (output_declaration)+ RPARENTH block
+    ;
+
 statement
-    : 'fun' ID LPARENTH (ID (',' ID)*)? RPARENTH block      #function_declaration
-    | ID LPARENTH (expression (',' expression)*)? RPARENTH  #function_use
-    | 'print' LPARENTH expression RPARENTH                  #print
-    | 'if' LPARENTH expression RPARENTH block               #if_statement
-    | 'while' LPARENTH expression RPARENTH block            #while_loop
-    | 'do' block 'while' expression                         #do_while_loop
-    | 'for' LPARENTH (ID EQ expression (',' ID EQ expression)*)? SEMI condition=expression SEMI (ID EQ expression (',' ID EQ expression)*)? RPARENTH block #for_loop
-    | BREAK                                                 #break
-    | CONTINUE                                              #continue
-    | ID EQ expression                                      #assignment
-    | VAR ID (EQ value=expression)?                         #declaration
-    | block                                                 #block_statement
+    : component_instance        #dummy
+    | input=ID EQ expression    #assignment
+    | signal_definition         #dummy
+    ;
+
+input_declaration
+    : 'input' ID
+    ;
+
+output_declaration
+    : 'output' ID
+    ;
+
+signal_definition
+    : 'signal' ID EQ expression
+    ;
+
+component_instance
+    : 'component' instance_name=ID EQ comp_name=ID LPARENTH (input=ID EQ expression)+ RPARENTH
     ;
 
 expression
-    : LPARENTH expression RPARENTH
-    | MINUS expression
-    | l=expression (MULTIPLY|DIVIDE) r=expression
-    | l=expression (PLUS|MINUS) r=expression
-    | NOT expression
-    | l=expression (AND|OR|IS_E|IS_M|IS_ME|IS_L|IS_LE) r=expression
-    | NUMBER
-    | ID
+    : LPARENTH expression RPARENTH                  #parenth_exp
+    | NOT expression                                #not_exp
+    | l=expression (AND|OR) r=expression            #and_or_exp
+    | BOOL                                          #bool_exp
+    | c_name=ID '.' c_out=ID                        #comp_out_exp
+    | ID                                            #id_expd_exp
     ;

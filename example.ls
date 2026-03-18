@@ -6,14 +6,14 @@ component com(
     output x
     output y
 ) {
-    signal u = a and b
-    x = u or c
+    signal s = a or c
+    x = a or c
     y = b and (not c)
 }
 
 main component main(
-    input x1 = 0
-    input x2 = 1
+    input x1
+    input x2
 
     output y1
     output y2
@@ -26,4 +26,13 @@ main component main(
 
     y1 = kaczka.x
     y2 = kaczka.x
+}
+
+component dupa(
+    input x1
+    input x2
+    output y1
+    output y2
+) {
+    y1 = x1 and y2
 }
