@@ -27,12 +27,3 @@ main component main(
     y1 = kaczka.x
     y2 = kaczka.x
 }
-
-component dupa(
-    input x1
-    input x2
-    output y1
-    output y2
-) {
-    y1 = x1 and y2
-}

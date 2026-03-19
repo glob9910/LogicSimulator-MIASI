@@ -2,8 +2,8 @@ import jpype
 
 jpype.startJVM(classpath=['target/LogicSimulator-1.0-SNAPSHOT.jar'])
 
-MyClass = jpype.JClass("MyClass")
-result = MyClass.getMessage()
+API = jpype.JClass("pl.pwr.miasi.API")
+result = API.getMessage()
 
 print(result)
 
