@@ -1,18 +1,71 @@
 import tkinter as tk
+from tkinter import messagebox
 from logika import components, connections, get_coordinates
 
+
+
 class App:
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk, javaFunc) -> None:
         self.root = root
         self.root.title("Symulator Logiczny - Porty i Łamane Linie")
+        self.root.geometry("800x600")
+        self.root.state('zoomed')
+
+
+        self.passToJava = javaFunc
+
+
+        # Kod Aleksandra
+        self.root.rowconfigure(0, weight=1)
+        self.root.columnconfigure(0, weight=1)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+
+        self.menubar = tk.Menu(self.root)
+
+        self.filemenu = tk.Menu(self.menubar, tearoff=0)
+        self.filemenu.add_command(label="Close", command=self.on_close)
+
+        self.menubar.add_cascade(menu=self.filemenu, label="File")
+
+        self.root.config(menu=self.menubar)
+
+
+        self.mainWindow = tk.Frame(self.root, bg="#2b2b2b")
+        self.mainWindow.columnconfigure(0, weight=1, uniform='one')
+        self.mainWindow.columnconfigure(1, weight=0)
+        self.mainWindow.columnconfigure(2, weight=1, uniform='one')
+        self.mainWindow.rowconfigure(0, weight=0)
+        self.mainWindow.rowconfigure(1, weight=1)
+        self.mainWindow.grid(row=0, column=0, sticky=tk.NSEW)
+
+
+        self.label = tk.Label(self.mainWindow, text="Logic text", font=('Arial', 18))
+        self.label.grid(row=0, column=0, pady=20)
+
+        self.textbox = tk.Text(self.mainWindow, font=('Arial', 12), bg="#2b2b2b", fg="#FFFFFF")
+        self.textbox.grid(row=1, column=0, padx=20, sticky=tk.NSEW)
+
+        self.button = tk.Button(self.mainWindow, text="Convert", font=('Arial', 16), command=self.Convert)
+        self.button.grid(row=1, column=1, padx=10, pady=10, sticky=tk.N)
+
+        self.inputText = ""
         
-        self.canvas = tk.Canvas(root, width=800, height=500, bg="#2b2b2b")
-        self.canvas.pack(fill="both", expand=True)
 
+        # self.canvas = tk.Canvas(root, width=800, height=500, bg="#2b2b2b")
+        # self.canvas.pack(fill="both", expand=True)
+
+        # Zmieniony kod Maćka aby działał z kodem Aleksandra
+        self.canvas = tk.Canvas(self.mainWindow, bg="#2b2b2b", highlightthickness=1)
+        self.canvas.grid(row=1, column=2, padx=20, sticky=tk.NSEW)
+
+
+        # Kod Maćka
         self.coords = get_coordinates(components, connections)
-
         self.draw_wires(connections)
         self.draw_components(components)
+
+
 
     def draw_wires(self, connections):
         for src, dst in connections:
@@ -70,6 +123,19 @@ class App:
             if 'out' in gate_data:
                 px, py = gate_data['out']['x'], gate_data['out']['y']
                 self.canvas.create_oval(px-r, py-r, px+r, py+r, outline="black")
+
+
+
+    def Convert(self):
+        self.inputText = self.textbox.get("1.0", tk.END)
+        self.passToJava(self.inputText)
+
+    def on_close(self):
+        close_app = messagebox.askyesno(title="Exit app?", message="Do you really want to exit?")
+        if close_app:
+            self.root.destroy()
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()

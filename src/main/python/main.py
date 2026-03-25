@@ -1,10 +1,18 @@
+import tkinter as tk
+from gui import App
 import jpype
 
-jpype.startJVM(classpath=['target/LogicSimulator-1.0-SNAPSHOT.jar'])
 
-API = jpype.JClass("pl.pwr.miasi.API")
-result = API.getMessage()
 
-print(result)
+if __name__ == "__main__":
+    jpype.startJVM(classpath=['target/LogicSimulator-1.0-SNAPSHOT.jar'])
 
-jpype.shutdownJVM()
+    API = jpype.JClass("pl.pwr.miasi.API")
+
+
+    root = tk.Tk()
+    app = App(root, API.getMessage)
+    root.mainloop()
+
+
+    jpype.shutdownJVM()
