@@ -12,10 +12,10 @@ class App:
         self.root.state('zoomed')
 
 
+        # Kod Aleksandra
         self.passToJava = javaFunc
 
 
-        # Kod Aleksandra
         self.root.rowconfigure(0, weight=1)
         self.root.columnconfigure(0, weight=1)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
