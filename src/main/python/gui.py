@@ -9,7 +9,7 @@ class App:
         self.root = root
         self.root.title("Symulator Logiczny - Porty i Łamane Linie")
         self.root.geometry("800x600")
-        self.root.state('zoomed')
+        # self.root.state('zoomed') -- na linuxie nie dziala zoomed
 
 
         # Kod Aleksandra
@@ -128,7 +128,7 @@ class App:
 
     def Convert(self):
         self.inputText = self.textbox.get("1.0", tk.END)
-        self.passToJava(self.inputText)
+        print(self.passToJava(self.inputText))  # print for testing
 
     def on_close(self):
         close_app = messagebox.askyesno(title="Exit app?", message="Do you really want to exit?")
