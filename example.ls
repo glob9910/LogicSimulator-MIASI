@@ -7,11 +7,19 @@ component com(
     output y
 ) {
     signal s = a or c
-    x = a or c
+    x = s
     y = b and (not c)
 }
 
-main component main(
+component krowa(
+    input a
+    input b
+    output c
+) {
+    c = a xor b or not a
+}
+
+main component my_circuit(
     input x1
     input x2
 
@@ -24,6 +32,11 @@ main component main(
         c = x1 or x2
     )
 
+    component kura = krowa(
+        a = x1
+        b = kaczka.a
+    )
+
     y1 = kaczka.x
-    y2 = kaczka.x
+    y2 = kura.c
 }

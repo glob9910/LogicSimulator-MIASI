@@ -1,0 +1,67 @@
+{
+  "components": {
+    "com": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "c"},
+        {"type": "OUTPUT", "name": "x"},
+        {"type": "OUTPUT", "name": "y"},
+        {"type": "SIGNAL", "name": "s"},
+        {"type": "OR", "name": "or1"},
+        {"type": "AND", "name": "and1"},
+        {"type": "NOT", "name": "not1"}
+      ],
+      "connections": [
+        ["a", "or1"],
+        ["c", "or1"],
+        ["or1", "s"],
+        ["s", "x"],
+        ["c", "not1"],
+        ["b", "and1"],
+        ["not1", "and1"],
+        ["and1", "y"]
+      ]
+    },
+    "krowa": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "OUTPUT", "name": "c"},
+        {"type": "OR", "name": "or1"},
+        {"type": "XOR", "name": "xor1"},
+        {"type": "NOT", "name": "not1"}
+      ],
+      "connections": [
+        ["a", "xor1"],
+        ["b", "xor1"],
+        ["a", "not1"],
+        ["xor1", "or1"],
+        ["not1", "or1"],
+        ["or1", "c"]
+      ]
+    }
+  },
+  "main": {
+    "elements": [
+      {"type": "INPUT", "name": "x1"},
+      {"type": "INPUT", "name": "x2"},
+      {"type": "OUTPUT", "name": "y1"},
+      {"type": "OUTPUT", "name": "y2"},
+      {"type": "com", "name": "kaczka"},
+      {"type": "OR", "name": "or1"},
+      {"type": "krowa", "name": "kura"}
+    ],
+    "connections": [
+      ["x1", "kaczka.a"],
+      ["1", "kaczka.b"],
+      ["x1", "or1"],
+      ["x2", "or1"],
+      ["or1", "kaczka.c"],
+      ["x1", "kura.a"],
+      ["kaczka.a", "kura.b"],
+      ["kaczka.x", "y1"],
+      ["kura.c", "y2"]
+    ]
+  }
+}

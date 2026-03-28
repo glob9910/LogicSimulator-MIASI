@@ -1,0 +1,33 @@
+json(componentsMap, mainComp) ::= <<
+{
+  "components": {
+    <componentsMap; separator=",\n">
+  },
+  "main": <if(mainComp)><mainComp><else>{}<endif>
+}
+>>
+
+componentEntry(name, comp) ::= <<
+"<name>": <comp>
+>>
+
+component(elements, connections) ::= <<
+{
+  "elements": [
+    <elements; separator=",\n">
+  ],
+  "connections": [
+    <connections; separator=",\n">
+  ]
+}
+>>
+
+element(type, name) ::= <<
+{"type": "<type>", "name": "<name>"}
+>>
+
+connection(from, to) ::= <<
+["<from>", "<to>"]
+>>
+
+signal(name) ::= "<name>"

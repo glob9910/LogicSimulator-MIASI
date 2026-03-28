@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 .kotlin
+__pycache__
 
 ### IntelliJ IDEA ###
 .idea/
@@ -11,3 +12,4 @@ target/
 *.iml
 *.ipr
 
+wy.json

@@ -56,14 +56,14 @@ signal_definition
     ;
 
 component_instance
-    : 'component' instance_name=ID EQ comp_name=ID LPARENTH (input=ID EQ expression)+ RPARENTH
+    : 'component' instance_name=ID EQ comp_name=ID LPARENTH (ID EQ expression)+ RPARENTH
     ;
 
 expression
-    : LPARENTH expression RPARENTH                  #parenth_exp
-    | NOT expression                                #not_exp
-    | l=expression (AND|OR) r=expression            #and_or_exp
-    | BOOL                                          #bool_exp
-    | c_name=ID '.' c_out=ID                        #comp_out_exp
-    | ID                                            #id_expd_exp
+    : LPARENTH expression RPARENTH                           #parenth_exp
+    | NOT expression                                         #not_exp
+    | l=expression (AND|OR|XOR|XNOR|NAND|NOR) r=expression   #bi_exp
+    | BOOL                                                   #bool_exp
+    | c_name=ID '.' c_out=ID                                 #comp_out_exp
+    | ID                                                     #id_exp
     ;
