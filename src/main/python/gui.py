@@ -60,6 +60,8 @@ class App:
         self.canvas.grid(row=1, column=2, padx=20, sticky=tk.NSEW)
 
 
+        self.jsonString = ""
+
         # Kod Maćka
         self.coords = get_coordinates(components, connections)
         self.draw_wires(connections)
@@ -128,7 +130,8 @@ class App:
 
     def Convert(self):
         self.inputText = self.textbox.get("1.0", tk.END)
-        print(self.passToJava(self.inputText))  # print for testing
+        self.jsonString = self.passToJava(self.inputText)
+        print(self.jsonString)  # print for testing
 
     def on_close(self):
         close_app = messagebox.askyesno(title="Exit app?", message="Do you really want to exit?")
@@ -139,5 +142,6 @@ class App:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = App(root)
+    tempFunc = lambda str: str
+    app = App(root, tempFunc)
     root.mainloop()
