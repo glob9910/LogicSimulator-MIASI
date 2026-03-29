@@ -75,12 +75,11 @@ class App:
 
     def draw_wires(self, connections):
         for src, dst in connections:
-            # Obsługa notacji kropkowej: 'kaczka.x' → 'kaczka'
+
             src_id = src.split('.')[0]
             dst_id = dst.split('.')[0]
 
-            # Punkt startowy — szukamy wyjścia (NIE oznaczamy jako occupied,
-            # bo jedno wyjście może zasilać wiele wejść)
+            # Punkt startowy 
             src_gate = self.coords[src_id]
             start_pin = None
             for key in sorted(src_gate.keys()):
@@ -93,7 +92,7 @@ class App:
             start_x = start_pin['x']
             start_y = start_pin['y']
 
-            # Punkt docelowy — szukamy wolnego wejścia
+            # Punkt docelowy 
             dst_gate = self.coords[dst_id]
             end_pin = None
             for key in sorted(dst_gate.keys()):
@@ -160,7 +159,7 @@ class App:
         const_counter = 0
         for conn in main['connections']:
             src, dst = str(conn[0]), str(conn[1])
-            # Stała logiczna ("1" lub "0") → tworzymy wirtualny INPUT
+            # Stała logiczna
             if src in ('0', '1'):
                 const_id = f'const_{src}_{const_counter}'
                 const_counter += 1
@@ -180,19 +179,15 @@ class App:
         self.canvas.delete("all")
         self.draw_wires(connections)
         self.draw_components(components)
-        # Ustawiamy scrollregion na cały narysowany obszar
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
     def _pan_start(self, event):
-        # Zapamiętujemy punkt startu przeciągania
         self.canvas.scan_mark(event.x, event.y)
 
     def _pan_move(self, event):
-        # Przesuwamy canvas o różnicę od punktu startu
         self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def _zoom(self, event):
-        # Scroll w górę = powiększenie, w dół = pomniejszenie
         if event.delta > 0:
             self.canvas.scale("all", event.x, event.y, 1.1, 1.1)
         else:
