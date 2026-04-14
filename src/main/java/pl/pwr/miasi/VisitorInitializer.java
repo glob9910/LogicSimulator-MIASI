@@ -4,25 +4,32 @@ import grammar.CircuitGrammarLexer;
 import grammar.CircuitGrammarParser;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
-import org.stringtemplate.v4.ST;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class VisitorInitializer {
     public String initialize(String program) {
-        CharStream input = CharStreams.fromString(program);
-
-        CircuitGrammarLexer lexer = new CircuitGrammarLexer(input);
+        CircuitGrammarLexer lexer = new CircuitGrammarLexer(CharStreams.fromString(program));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         CircuitGrammarParser parser = new CircuitGrammarParser(tokens);
-        ParseTree tree = parser.program();
+
+        DescriptiveErrorListener errorListener = new DescriptiveErrorListener();
+        lexer.removeErrorListeners();
+        parser.removeErrorListeners();
+        lexer.addErrorListener(errorListener);
+        parser.addErrorListener(errorListener);
+
+        CircuitGrammarParser.ProgramContext tree = parser.program();
+
+        if (errorListener.hasErrors()) {
+            String rawMessage = errorListener.getFullErrorMessage();
+            String escapedMessage = rawMessage.replace("\"", "\\\"").replace("\n", "\\n");
+            return "{\"error\": \"" + escapedMessage + "\"}";
+        }
 
         CircuitVisitor visitor = new CircuitVisitor();
-        ST res = visitor.visit(tree);
-
-        return res.render();
+        return visitor.visit(tree).render();
     }
 
     // for testing
