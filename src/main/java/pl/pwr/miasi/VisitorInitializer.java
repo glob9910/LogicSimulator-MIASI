@@ -23,13 +23,22 @@ public class VisitorInitializer {
         CircuitGrammarParser.ProgramContext tree = parser.program();
 
         if (errorListener.hasErrors()) {
-            String rawMessage = errorListener.getFullErrorMessage();
-            String escapedMessage = rawMessage.replace("\"", "\\\"").replace("\n", "\\n");
-            return "{\"error\": \"" + escapedMessage + "\"}";
+            return formatErrorJson(errorListener.getFullErrorMessage());
         }
 
-        CircuitVisitor visitor = new CircuitVisitor();
-        return visitor.visit(tree).render();
+        try {
+            CircuitVisitor visitor = new CircuitVisitor();
+            return visitor.visit(tree).render();
+        } catch (CircuitVisitor.SemanticException e) {
+            return formatErrorJson("Błąd logiczny: " + e.getMessage());
+        } catch (Exception e) {
+            return formatErrorJson("Niezdefiniowany błąd: " + e.getMessage());
+        }
+    }
+
+    private String formatErrorJson(String message) {
+        String escaped = message.replace("\"", "\\\"").replace("\n", "\\n");
+        return "{\"error\": \"" + escaped + "\"}";
     }
 
     // for testing

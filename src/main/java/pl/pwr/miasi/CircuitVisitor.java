@@ -14,9 +14,15 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
     private List<ST> currentElements;
     private List<ST> currentConnections;
     private Map<String, Integer> gateCounters;
-
     private final List<ST> componentDefinitions = new ArrayList<>();
     private ST mainComponent = null;
+
+    private Set<String> definedIds;
+    public static class SemanticException extends RuntimeException {
+        public SemanticException(String message) {
+            super(message);
+        }
+    }
 
     public CircuitVisitor() {
         this.stGroup = new STGroupFile(Objects.requireNonNull(getClass().getClassLoader().getResource("circuit.stg")));
@@ -44,6 +50,7 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
         currentElements = new ArrayList<>();
         currentConnections = new ArrayList<>();
         gateCounters = new HashMap<>();
+        definedIds = new HashSet<>();
 
         CircuitGrammarParser.Component_definitionContext compDef = ctx.component_definition();
         for (var in : compDef.input_declaration()) visit(in);
@@ -63,6 +70,7 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
         currentElements = new ArrayList<>();
         currentConnections = new ArrayList<>();
         gateCounters = new HashMap<>();
+        definedIds = new HashSet<>();
 
         String compName = ctx.name.getText();
 
@@ -85,18 +93,24 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
 
     @Override
     public ST visitInput_declaration(CircuitGrammarParser.Input_declarationContext ctx) {
+        String name = ctx.ID().getText();
+        definedIds.add(name);
+
         ST el = stGroup.getInstanceOf("element");
         el.add("type", "INPUT");
-        el.add("name", ctx.ID().getText());
+        el.add("name", name);
         currentElements.add(el);
         return null;
     }
 
     @Override
     public ST visitOutput_declaration(CircuitGrammarParser.Output_declarationContext ctx) {
+        String name = ctx.ID().getText();
+        definedIds.add(name);
+
         ST el = stGroup.getInstanceOf("element");
         el.add("type", "OUTPUT");
-        el.add("name", ctx.ID().getText());
+        el.add("name", name);
         currentElements.add(el);
         return null;
     }
@@ -111,6 +125,8 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
         currentElements.add(el);
 
         ST exprNodeST = visit(ctx.expression());
+        definedIds.add(name);
+
         addConnection(exprNodeST.render(), name);
 
         return null;
@@ -120,6 +136,7 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
     public ST visitComponent_instance(CircuitGrammarParser.Component_instanceContext ctx) {
         String compType = ctx.comp_name.getText();
         String instanceName = ctx.instance_name.getText();
+        definedIds.add(instanceName);
 
         ST el = stGroup.getInstanceOf("element");
         el.add("type", compType);
@@ -137,6 +154,8 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
     @Override
     public ST visitAssignment(CircuitGrammarParser.AssignmentContext ctx) {
         String target = ctx.input.getText();
+        checkExists(target);
+
         ST exprNodeST = visit(ctx.expression());
         addConnection(exprNodeST.render(), target);
         return null;
@@ -182,12 +201,14 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
 
     @Override
     public ST visitComp_out_exp(CircuitGrammarParser.Comp_out_expContext ctx) {
-        return createSignalST(ctx.c_name.getText() + "." + ctx.c_out.getText());
-    }
+        checkExists(ctx.c_name.getText());
+        return createSignalST(ctx.c_name.getText() + "." + ctx.c_out.getText());    }
 
     @Override
     public ST visitId_exp(CircuitGrammarParser.Id_expContext ctx) {
-        return createSignalST(ctx.ID().getText());
+        String id = ctx.ID().getText();
+        checkExists(id);
+        return createSignalST(id);
     }
 
     private String addGate(String type) {
@@ -200,6 +221,7 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
         el.add("name", name);
         currentElements.add(el);
 
+        definedIds.add(name);
         return name;
     }
 
@@ -214,5 +236,11 @@ public class CircuitVisitor extends CircuitGrammarBaseVisitor<ST> {
         ST st = stGroup.getInstanceOf("signal");
         st.add("name", name);
         return st;
+    }
+
+    private void checkExists(String id) {
+        if (!definedIds.contains(id)) {
+            throw new SemanticException("Użycie niezdefiniowanego identyfikatora: " + id);
+        }
     }
 }
