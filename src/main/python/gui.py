@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
-from logika import components, connections, get_coordinates
+from logika import get_coordinates
+import json
 
 
 
@@ -59,34 +60,52 @@ class App:
         self.canvas = tk.Canvas(self.mainWindow, bg="#2b2b2b", highlightthickness=1)
         self.canvas.grid(row=1, column=2, padx=20, sticky=tk.NSEW)
 
+        # Przesuwanie canvasu myszką (przeciąganie lewym przyciskiem)
+        self.canvas.bind("<ButtonPress-1>", self._pan_start)
+        self.canvas.bind("<B1-Motion>", self._pan_move)
+        # Zoom scrollem
+        self.canvas.bind("<MouseWheel>", self._zoom)
 
         self.jsonString = ""
 
-        # Kod Maćka
-        self.coords = get_coordinates(components, connections)
-        self.draw_wires(connections)
-        self.draw_components(components)
+        # Kod Maćka — canvas startuje pusty, rysowanie po Convert()
+        self.coords = {}
 
 
 
     def draw_wires(self, connections):
         for src, dst in connections:
-            # Punkt startowy z wyjścia bramki źródłowej
-            start_x = self.coords[src]['out']['x']
-            start_y = self.coords[src]['out']['y']
-            
-            # Punkt docelowy szukamy w wolnych wejściach
-            dst_gate = self.coords[dst]
-            
-            if 'in_1' in dst_gate and not dst_gate['in_1']['occupied']:
-                end_x, end_y = dst_gate['in_1']['x'], dst_gate['in_1']['y']
-                dst_gate['in_1']['occupied'] = True
-            elif 'in_2' in dst_gate and not dst_gate['in_2']['occupied']:
-                end_x, end_y = dst_gate['in_2']['x'], dst_gate['in_2']['y']
-                dst_gate['in_2']['occupied'] = True
-            else:
+
+            src_id = src.split('.')[0]
+            dst_id = dst.split('.')[0]
+
+            # Punkt startowy 
+            src_gate = self.coords[src_id]
+            start_pin = None
+            for key in sorted(src_gate.keys()):
+                if (key == 'out' or key.startswith('out_')) and isinstance(src_gate[key], dict):
+                    start_pin = src_gate[key]
+                    break
+            if start_pin is None:
+                print(f"BŁĄD: Nie znaleziono wyjścia dla '{src}'!")
+                continue
+            start_x = start_pin['x']
+            start_y = start_pin['y']
+
+            # Punkt docelowy 
+            dst_gate = self.coords[dst_id]
+            end_pin = None
+            for key in sorted(dst_gate.keys()):
+                if key.startswith('in_') and isinstance(dst_gate[key], dict):
+                    if not dst_gate[key].get('occupied', False):
+                        end_pin = dst_gate[key]
+                        end_pin['occupied'] = True
+                        break
+            if end_pin is None:
                 print(f"BŁĄD: Za dużo połączeń do bramki {dst}!")
                 continue
+            end_x = end_pin['x']
+            end_y = end_pin['y']
 
             # Manhattan Routing
             mid_x = (start_x + end_x) / 2
@@ -116,22 +135,64 @@ class App:
             
             # Rysowanie małych kropek (pinów) dla wizualizacji portów
             r = 3 # promień pinu
-            if 'in_1' in gate_data:
-                px, py = gate_data['in_1']['x'], gate_data['in_1']['y']
-                self.canvas.create_oval(px-r, py-r, px+r, py+r, outline="black")
-            if 'in_2' in gate_data:
-                px, py = gate_data['in_2']['x'], gate_data['in_2']['y']
-                self.canvas.create_oval(px-r, py-r, px+r, py+r, outline="black")
-            if 'out' in gate_data:
-                px, py = gate_data['out']['x'], gate_data['out']['y']
-                self.canvas.create_oval(px-r, py-r, px+r, py+r, outline="black")
+            for key in gate_data:
+                if (key.startswith('in_') or key == 'out' or key.startswith('out_')):
+                    if isinstance(gate_data[key], dict) and 'x' in gate_data[key]:
+                        px, py = gate_data[key]['x'], gate_data[key]['y']
+                        self.canvas.create_oval(px-r, py-r, px+r, py+r, outline="black")
 
 
+
+    def parse_json(self, json_string):
+        data = json.loads(json_string)
+        main = data['main']
+
+        components = []
+        for elem in main['elements']:
+            components.append({
+                'id': elem['name'],
+                'type': elem['type'],
+                'label': elem['name']
+            })
+
+        connections = []
+        const_counter = 0
+        for conn in main['connections']:
+            src, dst = str(conn[0]), str(conn[1])
+            # Stała logiczna
+            if src in ('0', '1'):
+                const_id = f'const_{src}_{const_counter}'
+                const_counter += 1
+                components.append({'id': const_id, 'type': 'INPUT', 'label': src})
+                src = const_id
+            connections.append((src, dst))
+
+        return components, connections
 
     def Convert(self):
         self.inputText = self.textbox.get("1.0", tk.END)
-        self.jsonString = self.passToJava(self.inputText)
+        self.jsonString = str(self.passToJava(self.inputText))
         print(self.jsonString)  # print for testing
+
+        components, connections = self.parse_json(self.jsonString)
+        self.coords = get_coordinates(components, connections)
+        self.canvas.delete("all")
+        self.draw_wires(connections)
+        self.draw_components(components)
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+    def _pan_start(self, event):
+        self.canvas.scan_mark(event.x, event.y)
+
+    def _pan_move(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
+
+    def _zoom(self, event):
+        if event.delta > 0:
+            self.canvas.scale("all", event.x, event.y, 1.1, 1.1)
+        else:
+            self.canvas.scale("all", event.x, event.y, 0.9, 0.9)
+        self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
     def on_close(self):
         close_app = messagebox.askyesno(title="Exit app?", message="Do you really want to exit?")
