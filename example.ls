@@ -34,7 +34,7 @@ main component my_circuit(
 
     component kura = krowa(
         a = x1
-        b = kaczka.a
+        b = kaczka.x
     )
 
     y1 = kaczka.x
