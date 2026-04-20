@@ -3,6 +3,7 @@ from tkinter import messagebox
 from logika import get_coordinates
 import json
 from simulator import CustomComponent
+from texteditor import CustomCodeEditor
 
 
 class App:
@@ -28,7 +29,7 @@ class App:
 
         self.root.config(menu=self.menubar)
 
-        self.mainWindow = tk.Frame(self.root, bg="#2b2b2b")
+        self.mainWindow = tk.Frame(self.root, bg="#323232")
         self.mainWindow.columnconfigure(0, weight=1, uniform='one')
         self.mainWindow.columnconfigure(1, weight=0)
         self.mainWindow.columnconfigure(2, weight=1, uniform='one')
@@ -40,9 +41,8 @@ class App:
             self.mainWindow, text="Logic text", font=('Arial', 18))
         self.label.grid(row=0, column=0, pady=20)
 
-        self.textbox = tk.Text(self.mainWindow, font=(
-            'Arial', 12), bg="#2b2b2b", fg="#FFFFFF")
-        self.textbox.grid(row=1, column=0, padx=20, sticky=tk.NSEW)
+        self.editorFrame = CustomCodeEditor(self.mainWindow)
+        self.editorFrame.grid(row=1, column=0, padx=20, sticky=tk.NSEW, pady=(0, 20))
 
         self.button = tk.Button(self.mainWindow, text="Convert", font=(
             'Arial', 16), command=self.Convert)
@@ -56,7 +56,7 @@ class App:
         # Zmieniony kod Maćka aby działał z kodem Aleksandra
         self.canvas = tk.Canvas(
             self.mainWindow, bg="#2b2b2b", highlightthickness=1)
-        self.canvas.grid(row=1, column=2, padx=20, sticky=tk.NSEW)
+        self.canvas.grid(row=1, column=2, padx=20, sticky=tk.NSEW, pady=(0, 20))
 
         # Przesuwanie canvasu myszką (przeciąganie lewym przyciskiem)
         self.canvas.bind("<ButtonPress-1>", self._pan_start)
@@ -169,6 +169,9 @@ class App:
             outline_color = "#e6a822" if is_custom else "#5e6266"
             rect_tags = (f"comp_{c_id}",) if is_custom else ()
 
+            is_input = comp['type'] == 'INPUT' and not c_id.startswith('const_')
+            rect_tags = (f"in_{c_id}",) if is_input else rect_tags
+
             rect_id = canvas.create_rectangle(x - 30, y - 20, x + 30, y + 20,
                                     fill=self.inact_comp, outline=outline_color, width=2, tags=rect_tags)
             
@@ -178,10 +181,14 @@ class App:
             if comp['type'] == 'OUTPUT':
                 self.COMPONENT_TO_RECTID[target_comp].append(rect_id)
 
-            if comp['type'] == 'INPUT' and not c_id.startswith('const_'):
-                canvas.itemconfig(rect_id, tags=(f"in_{c_id}",))
+            if is_input:
+                canvas.itemconfig(rect_id, tags=rect_tags)
                 canvas.tag_bind(f"in_{c_id}", "<Button-1>", lambda e,
                                 tc=target_comp, rId=rect_id, cId=c_id: self.click_input(tc, rId, cId))
+                canvas.tag_bind(f"in_{c_id}", "<Enter>", lambda e,
+                                tag=f"in_{c_id}": canvas.config(cursor="hand2"))
+                canvas.tag_bind(f"in_{c_id}", "<Leave>", lambda e,
+                                tag=f"in_{c_id}": canvas.config(cursor=""))
 
             if is_custom:
                 canvas.tag_bind(f"comp_{c_id}", "<Button-1>", lambda e,
@@ -400,7 +407,7 @@ class App:
 
 
     def Convert(self):
-        self.inputText = self.textbox.get("1.0", tk.END)
+        self.inputText = self.editorFrame.text_area.get("1.0", tk.END)
         self.jsonString = str(self.passToJava(self.inputText))
         print(self.jsonString)  # print for testing
 
