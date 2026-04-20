@@ -73,12 +73,15 @@ class App:
         self.COMPONENT_TO_CANVAS = {'main': self.canvas}
         self.COMPONENT_TO_SIMULATOR = {'main': None}
         self.COMPONENT_TO_RECTID = {'main': []}
+        self.COMPONENT_TO_ID_TO_TAG = {'main': {}}
         self.act_comp = "#dddd00"
         self.inact_comp = "#3c3f41"
+        self.act_wire = "#ffff00"
+        self.inact_wire = "#00ffcc"
 
 
 
-    def draw_wires(self, connections, target_canvas=None, target_coords=None):
+    def draw_wires(self, connections, target_comp, target_canvas=None, target_coords=None):
         canvas = target_canvas if target_canvas else self.canvas
         coords = target_coords if target_coords else self.coords
         for offset_i, conn_data in enumerate(connections):
@@ -132,10 +135,17 @@ class App:
             #print(
             #    f"[DEBUG] Wires: src={src}, dst={dst}, net_id={net_id}, w_tag={w_tag}")
 
-            canvas.create_line(
+            # Save the wire group tags
+            self.COMPONENT_TO_ID_TO_TAG[target_comp][net_id] = [w_tag, self.inact_wire]
+
+            line_id = canvas.create_line(
                 start_x, start_y, mid_x, start_y, mid_x, end_y, end_x, end_y,
                 fill="#00ffcc", width=2, tags=(w_tag,)
             )
+
+            if net_id.startswith('const_1'):
+                self.COMPONENT_TO_ID_TO_TAG[target_comp][net_id][1] = self.act_wire
+                canvas.itemconfig(line_id, fill=self.act_wire)
 
             def make_on_enter(tag):
                 def _enter(e):
@@ -143,9 +153,9 @@ class App:
                     canvas.tag_raise(tag)
                 return _enter
 
-            def make_on_leave(tag):
+            def make_on_leave(tag, net_id=net_id):
                 def _leave(e):
-                    canvas.itemconfig(tag, fill="#00ffcc", width=2)
+                    canvas.itemconfig(tag, fill=self.COMPONENT_TO_ID_TO_TAG[target_comp][net_id][1], width=2)
                     canvas.tag_lower(tag)
                 return _leave
 
@@ -288,13 +298,14 @@ class App:
 
         self.COMPONENT_TO_CANVAS[comp_type] = canvas
         self.COMPONENT_TO_RECTID[comp_type] = []
+        self.COMPONENT_TO_ID_TO_TAG[comp_type] = {}
 
         components, connections, orders = self.parse_json(
             self.jsonString, target=comp_type)
         coords, components, connections = get_coordinates(
             components, connections, orders)
 
-        self.draw_wires(connections, target_canvas=canvas,
+        self.draw_wires(connections, comp_type, target_canvas=canvas,
                         target_coords=coords)
         self.draw_components(
             components, comp_type, target_canvas=canvas, target_coords=coords)
@@ -305,7 +316,7 @@ class App:
 
 
 
-    def createCustomComponent(self, target, name):
+    def createCustomComponent(self, target, name, origin='main'):
         if target == 'main':
             component = self.full_data['main']
         else:
@@ -333,10 +344,25 @@ class App:
         for elem in component['elements']:
             e_type, e_name = elem['type'], elem['name']
             if e_type not in custom.GATE_MAPPING:
-                special[e_name] = self.createCustomComponent(e_type, e_name)
+                special[e_name] = self.createCustomComponent(e_type, e_name, origin)
                 custom.components.append(special[e_name])
+                for out in special[e_name].compOutputs:
+                    if target == origin:
+                        net_id = e_name + "." + out.name
+                        w_tag = self.COMPONENT_TO_ID_TO_TAG[target][net_id][0]
+                        def w_func(val, w_tag=w_tag, net_id=net_id, target=target):
+                            self.COMPONENT_TO_CANVAS[target].itemconfig(w_tag, fill=self.act_wire if val else self.inact_wire)
+                            self.COMPONENT_TO_ID_TO_TAG[target][net_id][1] = self.act_wire if val else self.inact_wire
+                        out.canvFunc = w_func
             else:
-                gates[e_name] = custom.create_component(elem['type'], elem['name'])
+                if any(e_name == conn[0] for conn in component['connections']) and target == origin:
+                    w_tag = self.COMPONENT_TO_ID_TO_TAG[target][e_name][0]
+                    def w_func(val, w_tag=w_tag, e_name=e_name, target=target):
+                        self.COMPONENT_TO_CANVAS[target].itemconfig(w_tag, fill=self.act_wire if val else self.inact_wire)
+                        self.COMPONENT_TO_ID_TO_TAG[target][e_name][1] = self.act_wire if val else self.inact_wire
+                else:
+                    w_func = lambda a: None
+                gates[e_name] = custom.create_component(elem['type'], elem['name'], w_func)
         
         dst_counter = {}
 
@@ -395,7 +421,7 @@ class App:
 
 
     def setupSimulator(self, target='main'):
-        self.COMPONENT_TO_SIMULATOR[target] = self.createCustomComponent(target, target)
+        self.COMPONENT_TO_SIMULATOR[target] = self.createCustomComponent(target, target, target)
 
     def start_simulator(self, comp_type):
         self.setupSimulator(comp_type)
@@ -418,9 +444,10 @@ class App:
         self.COMPONENT_TO_CANVAS = {'main': self.canvas}
         self.COMPONENT_TO_RECTID = {'main': []}
         self.COMPONENT_TO_SIMULATOR = {'main': None}
+        self.COMPONENT_TO_ID_TO_TAG = {'main': {}}
 
         self.canvas.delete("all")
-        self.draw_wires(connections)
+        self.draw_wires(connections, 'main')
         self.draw_components(components, 'main')
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
