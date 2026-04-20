@@ -59,8 +59,8 @@
       ["x2", "or1"],
       ["or1", "kaczka.c"],
       ["x1", "kura.a"],
-      ["kaczka.a", "kura.b"],
-      ["kaczka.x", "y1"],
+      ["kaczka.x", "kura.b"],
+      ["kaczka.y", "y1"],
       ["kura.c", "y2"]
     ]
   }

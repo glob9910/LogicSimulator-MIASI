@@ -37,6 +37,6 @@ main component my_circuit(
         b = kaczka.x
     )
 
-    y1 = kaczka.x
+    y1 = kaczka.y
     y2 = kura.c
 }
