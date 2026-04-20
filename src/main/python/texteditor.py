@@ -97,6 +97,14 @@ class CustomCodeEditor(tk.Frame):
         self.after(10, self.apply_highlighting)
 
     def on_key_release(self, event=None):
+        # Pobierz numer linii, w której jest kursor
+        current_line = self.text_area.index("insert").split(".")[0]
+        
+        # Usuń podświetlenie błędu tylko z tej linii, gdy użytkownik coś w niej pisze
+        start = f"{current_line}.0"
+        end = f"{current_line}.0 + 1 line"
+        self.text_area.tag_remove("error_line", start, end)
+
         self.update_line_numbers()
         self.apply_highlighting()
 
@@ -140,3 +148,23 @@ class CustomCodeEditor(tk.Frame):
                 fill="#606366", font=("Consolas", 11)
             )
             i = self.text_area.index(f"{i}+1line")
+
+    def clear_errors(self):
+        self.text_area.tag_remove("error_line", "1.0", tk.END)
+
+    def highlight_error_line(self, line_number):
+        # Konfiguracja tagu błędu
+        # Używamy koloru tła (background), który rzuca się w oczy
+        self.text_area.tag_configure("error_line", background="#4b2525", foreground="#ff6b6b")
+        
+        # Usuwamy poprzednie błędy (opcjonalnie)
+        #self.text_area.tag_remove("error_line", "1.0", tk.END)
+        
+        # Indeksy: od początku linii do początku następnej (pociągnie tło do końca)
+        start = f"{line_number}.0"
+        end = f"{line_number}.0 + 1 line"
+        
+        self.text_area.tag_add("error_line", start, end)
+        
+        # Przewiń widok do tej linii, żeby użytkownik ją widział
+        self.text_area.see(start)

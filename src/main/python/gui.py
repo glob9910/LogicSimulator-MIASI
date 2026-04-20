@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from logika import get_coordinates
 import json
+import re
 from simulator import CustomComponent
 from texteditor import CustomCodeEditor
 
@@ -435,6 +436,8 @@ class App:
     def Convert(self):
         self.inputText = self.editorFrame.text_area.get("1.0", tk.END)
         self.jsonString = str(self.passToJava(self.inputText))
+        if self.handle_errors():
+            return
         print(self.jsonString)  # print for testing
 
         components, connections, orders = self.parse_json(self.jsonString)
@@ -452,6 +455,23 @@ class App:
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
         self.start_simulator('main')
+
+
+
+    def handle_errors(self):
+        print(self.jsonString)
+        pattern = re.escape("\\nLine") + r'\s*([0-9]+:[0-9]+)'
+        matches = re.finditer(pattern, self.jsonString)
+
+        self.editorFrame.clear_errors()
+
+        has_errors = False
+        for match in matches:
+            line_info = match.group(1)
+            self.editorFrame.highlight_error_line(int(line_info.split(':')[0]))
+            has_errors = True
+
+        return has_errors
 
 
 
