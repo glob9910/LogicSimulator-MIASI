@@ -1,7 +1,7 @@
 import collections
 
 
-def get_coordinates(components, connections):
+def get_coordinates(components, connections, orders):
     # 1: Obliczanie poziomów (Ranks)
     ranks = {c['id']: (0 if c['type'] == 'INPUT' else -1) for c in components}
 
@@ -96,32 +96,37 @@ def get_coordinates(components, connections):
                 gate_data['out'] = {'x': x + 30, 'y': y}
             else:
                 # Instancja komponentu (np. kaczka) — liczymy piny z connections
-                in_pins = set()
-                out_pins = set()
+                in_pins = []
+                out_pins = []
                 for conn_data in connections:
                     s, d = conn_data[0], conn_data[1]
                     if '.' in d and d.split('.')[0] == c_id:
-                        in_pins.add(d.split('.')[1])
+                        in_pins.append(d.split('.')[1])
                     if '.' in s and s.split('.')[0] == c_id:
-                        out_pins.add(s.split('.')[1])
+                        out_pins.append(s.split('.')[1])
 
                 num_in = len(in_pins) if in_pins else 2
                 num_out = len(out_pins) if out_pins else 1
 
-                spacing = 20
-                total_in = (num_in - 1) * spacing
+                c_id_type = next((item['type'] for item in components if item['id'] == c_id), None)
+
+                rect_size = 40
+                spacing_in = rect_size / (num_in + 1)
                 for j in range(num_in):
-                    pin_y = y - total_in / 2 + j * spacing
+                    pin_y = y - rect_size / 2 + (j + 1) * spacing_in
+                    in_name = orders[c_id_type]['INPUT'][j] if in_pins else ''
                     gate_data[f'in_{j+1}'] = {'x': x -
-                                              30, 'y': pin_y, 'occupied': False}
+                                              30, 'y': pin_y, 'occupied': False, 'name': in_name}
 
                 if num_out == 1:
-                    gate_data['out'] = {'x': x + 30, 'y': y}
+                    out_name = orders[c_id_type]['OUTPUT'][0] if out_pins else ''
+                    gate_data['out'] = {'x': x + 30, 'y': y, 'name': out_name}
                 else:
-                    total_out = (num_out - 1) * spacing
+                    spacing_out = rect_size / (num_out + 1)
                     for j in range(num_out):
-                        pin_y = y - total_out / 2 + j * spacing
-                        gate_data[f'out_{j+1}'] = {'x': x + 30, 'y': pin_y}
+                        pin_y = y - rect_size / 2 + (j + 1) * spacing_out
+                        out_name = orders[c_id_type]['OUTPUT'][j] if out_pins else ''
+                        gate_data[f'out_{j+1}'] = {'x': x + 30, 'y': pin_y, 'name': out_name}
 
             coords[c_id] = gate_data
     return coords, components, connections
