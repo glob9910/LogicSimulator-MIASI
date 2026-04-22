@@ -20,9 +20,11 @@ def get_coordinates(components, connections, orders):
                 ranks[c['id']] = max(inputs) + 1
                 changed = True
 
-    # Wirtualne bramki dla długich połączeń
+    # Wirtualne bramki dla długich połączeń (Shared Virtual Nodes)
     new_components = components.copy()
     new_connections = []
+    virtual_nodes = {} # Key: (source_pin, rank), Value: virtual_id
+    added_links = set() # To avoid duplicate segments: (src, dst)
 
     virtual_counter = 0
     for src, dst in connections:
@@ -35,20 +37,34 @@ def get_coordinates(components, connections, orders):
         if r_src != -1 and r_dst != -1 and r_dst - r_src > 1:
             prev_out = src
             for r in range(r_src + 1, r_dst):
-                v_id = f"v_node_{virtual_counter}"
-                virtual_counter += 1
-
-                new_components.append(
-                    {'id': v_id, 'type': 'VIRTUAL', 'label': ''})
-                ranks[v_id] = r
-
-                new_connections.append((prev_out, v_id, src))
-
+                # Unique key for this trunk: the source pin and the target rank
+                v_key = (src, r)
+                
+                if v_key not in virtual_nodes:
+                    v_id = f"v_node_{virtual_counter}"
+                    virtual_counter += 1
+                    new_components.append({'id': v_id, 'type': 'VIRTUAL', 'label': ''})
+                    ranks[v_id] = r
+                    virtual_nodes[v_key] = v_id
+                
+                v_id = virtual_nodes[v_key]
+                
+                # Add connection segment if not already drawn for this net
+                if (prev_out, v_id) not in added_links:
+                    new_connections.append((prev_out, v_id, src))
+                    added_links.add((prev_out, v_id))
+                
                 prev_out = v_id
 
-            new_connections.append((prev_out, dst, src))
+            # Connect the last virtual node to the final destination
+            if (prev_out, dst) not in added_links:
+                new_connections.append((prev_out, dst, src))
+                added_links.add((prev_out, dst))
         else:
-            new_connections.append((src, dst, src))
+            # Short connection or already handled
+            if (src, dst) not in added_links:
+                new_connections.append((src, dst, src))
+                added_links.add((src, dst))
 
     components = new_components
     connections = new_connections
