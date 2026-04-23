@@ -89,6 +89,21 @@ class App:
             if os.path.exists(img_path):
                 self.original_images[gate] = Image.open(img_path)
 
+        # error panel
+        self.errorFrame = tk.Frame(self.mainWindow, bg="#1e1e1e")
+        self.errorFrame.grid(row=2, column=0, columnspan=3, sticky=tk.NSEW, padx=10, pady=(0,10))
+
+        self.mainWindow.rowconfigure(2, weight=0)
+
+        self.errorText = tk.Text(self.errorFrame, height=6, bg="#1e1e1e", fg="#ff6b6b",
+                                 insertbackground="white", wrap="word")
+        self.errorText.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.errorScrollbar = tk.Scrollbar(self.errorFrame, command=self.errorText.yview)
+        self.errorScrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.errorText.config(yscrollcommand=self.errorScrollbar.set)
+        self.errorText.config(state=tk.DISABLED)
 
 
     def draw_wires(self, connections, components, target_comp, target_canvas=None, target_coords=None):
@@ -530,11 +545,10 @@ class App:
         self.start_simulator('main')
 
 
-
     def handle_errors(self):
         print(self.jsonString)
         pattern = re.escape("\\nLine") + r'\s*([0-9]+:[0-9]+)'
-        matches = re.finditer(pattern, self.jsonString)
+        matches = list(re.finditer(pattern, self.jsonString))
 
         self.editorFrame.clear_errors()
 
@@ -546,19 +560,38 @@ class App:
             end = min(len(self.jsonString), match.end() + 50)
             context = self.jsonString[start:end]
 
-            if "logiczny:" in context:
-                continue
+            error_messages.append(context.strip())
 
             line_info = match.group(1)
             self.editorFrame.highlight_error_line(int(line_info.split(':')[0]))
             has_errors = True
 
-        if error_messages:
-            msg = "\n\n".join(error_messages)
-            messagebox.showerror("Errors:", msg)
+        try:
+            parsed_data = json.loads(self.jsonString)
+            if isinstance(parsed_data, dict) and "error" in parsed_data:
+                has_errors = True
+                error_messages.append(parsed_data["error"])
+        except json.JSONDecodeError:
+            if not has_errors:
+                has_errors = True
+                error_messages.append(self.jsonString.strip())
+
+        if has_errors:
+            self.show_errors(error_messages)
+        else:
+            self.show_errors([])
 
         return has_errors
 
+
+    def show_errors(self, errors):
+        self.errorText.config(state=tk.NORMAL)
+        self.errorText.delete("1.0", tk.END)
+
+        for err in errors:
+            self.errorText.insert(tk.END, err + "\n\n")
+
+        self.errorText.config(state=tk.DISABLED)
 
 
     def _pan_start(self, event):
