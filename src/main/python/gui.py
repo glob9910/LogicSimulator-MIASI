@@ -508,7 +508,6 @@ class App:
 
         if self.handle_errors():
             return
-        # print(self.jsonString)  # print for testing
 
         components, connections, orders = self.parse_json(self.jsonString)
         self.coords, components, connections = get_coordinates(
@@ -540,10 +539,23 @@ class App:
         self.editorFrame.clear_errors()
 
         has_errors = False
+        error_messages = []
+
         for match in matches:
+            start = max(0, match.start() - 50)
+            end = min(len(self.jsonString), match.end() + 50)
+            context = self.jsonString[start:end]
+
+            if "logiczny:" in context:
+                continue
+
             line_info = match.group(1)
             self.editorFrame.highlight_error_line(int(line_info.split(':')[0]))
             has_errors = True
+
+        if error_messages:
+            msg = "\n\n".join(error_messages)
+            messagebox.showerror("Errors:", msg)
 
         return has_errors
 
