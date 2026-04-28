@@ -1,3 +1,5 @@
+# Instrukcja uruchomienia:
+
 ## libraries:
 python3 -m venv venv 
 source venv/bin/activate
@@ -9,3 +11,7 @@ export JAVA_HOME=/home/kamila/.local/lib/java/jdk-21.0.2 -- (bez /bin/java na ko
 
 ## run:
 python3 src/main/python/main.py
+
+# Przykład 
+
+Przykład kodu napisanego w naszym języku znajduje się w pliku 'example.ls' i może on zostać wklejony bezpośrednio do okna w aplikacji.

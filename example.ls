@@ -1,42 +1,58 @@
-component com(
+component half_adder(
     input a
     input b
-    input c
 
-    output x
-    output y
+    output sum
+    output carry
 ) {
-    signal s = a or c
-    x = s
-    y = b and (not c)
+    sum = a xor b
+    carry = a and b
 }
 
-component krowa(
+component full_adder(
     input a
     input b
-    output c
+    input cin
+
+    output sum
+    output cout
 ) {
-    c = a xor b or not a
+    component ha1 = half_adder(
+        a = a
+        b = b
+    )
+
+    component ha2 = half_adder(
+        a = ha1.sum
+        b = cin
+    )
+
+    sum = ha2.sum
+    cout = ha1.carry or ha2.carry
 }
 
-main component my_circuit(
-    input x1
-    input x2
+main component simple_2bit_adder(
+    input a0
+    input a1
+    input b0
+    input b1
 
-    output y1
-    output y2
+    output s0
+    output s1
+    output carry_out
 ) {
-    component kaczka = com(
-        a = x1
-        b = 1
-        c = x1 or x2
+    component bit0 = half_adder(
+        a = a0
+        b = b0
     )
 
-    component kura = krowa(
-        a = x1
-        b = kaczka.x
+    component bit1 = full_adder(
+        a = a1
+        b = b1
+        cin = bit0.carry
     )
 
-    y1 = kaczka.y
-    y2 = kura.c
+    s0 = bit0.sum
+    s1 = bit1.sum
+    carry_out = bit1.cout
 }
