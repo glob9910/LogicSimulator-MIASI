@@ -5,6 +5,8 @@ import json
 import re
 from simulator import CustomComponent
 from texteditor import CustomCodeEditor
+import os
+from PIL import Image, ImageTk
 
 
 class App:
@@ -75,31 +77,52 @@ class App:
         self.COMPONENT_TO_SIMULATOR = {'main': None}
         self.COMPONENT_TO_RECTID = {'main': []}
         self.COMPONENT_TO_ID_TO_TAG = {'main': {}}
-        self.act_comp = "#dddd00"
+        self.act_comp = "#00FF00"
         self.inact_comp = "#3c3f41"
-        self.act_wire = "#ffff00"
-        self.inact_wire = "#00ffcc"
+        self.act_wire = "#00FF00"  # Jasnozielony dla stanu wysokiego (1)
+        self.inact_wire = "#006400"  # Ciemnozielony dla stanu niskiego (0)
+
+        self.original_images = {}
+        assets_dir = os.path.join(os.path.dirname(__file__), '..', 'resources', 'assets')
+        for gate in ['AND', 'OR', 'NOT', 'XOR', 'NAND', 'NOR', 'XNOR']:
+            img_path = os.path.join(assets_dir, f"{gate}.png")
+            if os.path.exists(img_path):
+                self.original_images[gate] = Image.open(img_path)
+
+        # error panel
+        self.errorFrame = tk.Frame(self.mainWindow, bg="#1e1e1e")
+        self.errorFrame.grid(row=2, column=0, columnspan=3, sticky=tk.NSEW, padx=10, pady=(0,10))
+
+        self.mainWindow.rowconfigure(2, weight=0)
+
+        self.errorText = tk.Text(self.errorFrame, height=6, bg="#1e1e1e", fg="#ff6b6b",
+                                 insertbackground="white", wrap="word")
+        self.errorText.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.errorScrollbar = tk.Scrollbar(self.errorFrame, command=self.errorText.yview)
+        self.errorScrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.errorText.config(yscrollcommand=self.errorScrollbar.set)
+        self.errorText.config(state=tk.DISABLED)
 
 
-
-    def draw_wires(self, connections, target_comp, target_canvas=None, target_coords=None):
+    def draw_wires(self, connections, components, target_comp, target_canvas=None, target_coords=None):
         canvas = target_canvas if target_canvas else self.canvas
         coords = target_coords if target_coords else self.coords
+        
+        valid_wires = []
         for offset_i, conn_data in enumerate(connections):
             src, dst = conn_data[0], conn_data[1]
-            # Używamy ujednoliconego net_id z logika.py jeśli istnieje (cały przewód = 1 tag)
             net_id = conn_data[2] if len(conn_data) > 2 else src
 
-            # Obsługa notacji kropkowej: 'kaczka.x' → 'kaczka', 'or1' -> 'or1'
             src_id = src.split('.')[0]
             dst_id = dst.split('.')[0]
-
-            # Obsługa notacji kropkowej: 'kaczka.x' → 'x', 'or1' -> ''
             src_g_name = src.split('.')[1] if '.' in src else ''
             dst_g_name = dst.split('.')[1] if '.' in dst else ''
 
-            # Punkt startowy — szukamy nazwy wyjścia
-            src_gate = coords[src_id]
+            src_gate = coords.get(src_id)
+            if not src_gate: continue
+
             start_pin = None
             for key in sorted(src_gate.keys()):
                 if (key == 'out' or key.startswith('out_')) and isinstance(src_gate[key], dict):
@@ -109,11 +132,10 @@ class App:
             if start_pin is None:
                 print(f"BŁĄD: Nie znaleziono wyjścia dla '{src}'!")
                 continue
-            start_x = start_pin['x']
-            start_y = start_pin['y']
 
-            # Punkt docelowy — szukamy nazwy wejścia
-            dst_gate = coords[dst_id]
+            dst_gate = coords.get(dst_id)
+            if not dst_gate: continue
+
             end_pin = None
             for key in sorted(dst_gate.keys()):
                 if key.startswith('in_') and isinstance(dst_gate[key], dict):
@@ -125,26 +147,71 @@ class App:
             if end_pin is None:
                 print(f"BŁĄD: Za dużo połączeń do bramki {dst}!")
                 continue
-            end_x = end_pin['x']
-            end_y = end_pin['y']
 
-            # Manhattan Routing
-            fraction = 0.2 + (offset_i % 7) * 0.1
-            mid_x = start_x + (end_x - start_x) * fraction
+            valid_wires.append({
+                'net_id': net_id,
+                'src_id': src_id, 'dst_id': dst_id,
+                'start_x': start_pin['x'], 'start_y': start_pin['y'],
+                'end_x': end_pin['x'], 'end_y': end_pin['y'],
+                'src_gate': src_gate, 'dst_gate': dst_gate
+            })
+
+        channels = {}
+        for w in valid_wires:
+            channel_key = int(w['start_x'] // 10)
+            if channel_key not in channels:
+                channels[channel_key] = []
+            channels[channel_key].append(w)
+
+        for channel_key, wds in channels.items():
+            unique_nets = []
+            for w in wds:
+                if w['net_id'] not in unique_nets:
+                    unique_nets.append(w['net_id'])
+            
+            net_avg_y = {
+                net: sum(w['start_y'] for w in wds if w['net_id'] == net) / sum(1 for w in wds if w['net_id'] == net)
+                for net in unique_nets
+            }
+            unique_nets.sort(key=lambda net: net_avg_y[net])
+
+            num_tracks = len(unique_nets)
+            min_end_x = min(w['end_x'] for w in wds)
+
+            for w in wds:
+                track_idx = unique_nets.index(w['net_id'])
+                if num_tracks == 1:
+                    fraction = 0.5
+                else:
+                    fraction = 0.2 + (0.6 * (track_idx / (num_tracks - 1)))
+                
+                w['mid_x'] = w['start_x'] + (min_end_x - w['start_x']) * fraction
+
+        for w in valid_wires:
+            net_id = w['net_id']
+            mid_x = w['mid_x']
+
+            draw_start_x = w['start_x']
+            src_type = next((c['type'] for c in components if c['id'] == w['src_id']), None)
+            if src_type in self.original_images:
+                draw_start_x = w['src_gate']['x']
+
+            draw_end_x = w['end_x']
+            dst_type = next((c['type'] for c in components if c['id'] == w['dst_id']), None)
+            if dst_type in self.original_images:
+                draw_end_x = w['dst_gate']['x']
 
             w_tag = f"wire_group_{str(net_id).replace('.', '_')}"
-            #print(
-            #    f"[DEBUG] Wires: src={src}, dst={dst}, net_id={net_id}, w_tag={w_tag}")
 
             # Save the wire group tags
             self.COMPONENT_TO_ID_TO_TAG[target_comp][net_id] = [w_tag, self.inact_wire]
 
             line_id = canvas.create_line(
-                start_x, start_y, mid_x, start_y, mid_x, end_y, end_x, end_y,
-                fill="#00ffcc", width=2, tags=(w_tag,)
+                draw_start_x, w['start_y'], mid_x, w['start_y'], mid_x, w['end_y'], draw_end_x, w['end_y'],
+                fill=self.inact_wire, width=2, tags=(w_tag,)
             )
 
-            if net_id.startswith('const_1'):
+            if str(net_id).startswith('const_1'):
                 self.COMPONENT_TO_ID_TO_TAG[target_comp][net_id][1] = self.act_wire
                 canvas.itemconfig(line_id, fill=self.act_wire)
 
@@ -152,6 +219,7 @@ class App:
                 def _enter(e):
                     canvas.itemconfig(tag, fill="#ffffff", width=4)
                     canvas.tag_raise(tag)
+                    canvas.tag_raise("gate_image")
                 return _enter
 
             def make_on_leave(tag, net_id=net_id):
@@ -166,6 +234,12 @@ class App:
     def draw_components(self, components, target_comp, target_canvas=None, target_coords=None):
         canvas = target_canvas if target_canvas else self.canvas
         coords = target_coords if target_coords else self.coords
+        
+        if not hasattr(canvas, 'zoom_factor'):
+            canvas.zoom_factor = 1.0
+            canvas.tk_images = {}
+            canvas.original_fonts = {}
+
         for comp in components:
             if comp['type'] == 'VIRTUAL':
                 continue
@@ -173,8 +247,6 @@ class App:
             c_id = comp['id']
             gate_data = coords[c_id]
             x, y = gate_data['x'], gate_data['y']
-
-            # Prostokąt reprezentujący bramkę
             is_custom = comp['type'] not in (
                 'INPUT', 'OUTPUT', 'AND', 'OR', 'NOT', 'XOR', 'NAND', 'NOR', 'XNOR', 'SIGNAL', 'VIRTUAL')
             outline_color = "#e6a822" if is_custom else "#5e6266"
@@ -183,10 +255,25 @@ class App:
             is_input = comp['type'] == 'INPUT' and not c_id.startswith('const_')
             rect_tags = (f"in_{c_id}",) if is_input else rect_tags
 
-            rect_id = canvas.create_rectangle(x - 30, y - 20, x + 30, y + 20,
-                                    fill=self.inact_comp, outline=outline_color, width=2, tags=rect_tags)
+            if comp['type'] in self.original_images:
+                if comp['type'] not in canvas.tk_images:
+                    orig_img = self.original_images[comp['type']]
+                    base_w, base_h = 60, 40
+                    new_w = max(1, int(base_w * canvas.zoom_factor))
+                    new_h = max(1, int(base_h * canvas.zoom_factor))
+                    scaled_img = orig_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                    canvas.tk_images[comp['type']] = ImageTk.PhotoImage(scaled_img)
+                    
+                rect_id = canvas.create_image(
+                    x, y, 
+                    image=canvas.tk_images[comp['type']], 
+                    tags=rect_tags + ("gate_image", f"gate_img_{comp['type']}")
+                )
+            else:
+                rect_id = canvas.create_rectangle(x - 30, y - 20, x + 30, y + 20,
+                                        fill=self.inact_comp, outline=outline_color, width=2, tags=rect_tags)
             
-            if c_id.startswith('const_1'):
+            if c_id.startswith('const_1') and comp['type'] not in self.original_images:
                 canvas.itemconfig(rect_id, fill=self.act_comp, outline='#ffff00')
 
             if comp['type'] == 'OUTPUT':
@@ -210,26 +297,27 @@ class App:
                                 tag=f"comp_{c_id}": canvas.config(cursor=""))
 
             # Etykiety i teksty
-            canvas.create_text(
-                x, y-5, text=comp['type'], font=("Arial", 9, "bold"), fill="white", tags=rect_tags)
-            canvas.create_text(
-                x, y+10, text=comp['label'], font=("Arial", 7), fill="#aaaaaa", tags=rect_tags)
+            if comp['type'] not in self.original_images:
+                txt_id = canvas.create_text(
+                    x, y-5, text=comp['type'], font=("Arial", max(1, int(9 * canvas.zoom_factor)), "bold"), fill="white", tags=rect_tags)
+                canvas.original_fonts[txt_id] = ("Arial", 9, "bold")
+            
+            txt_id = canvas.create_text(
+                x, y+35, text=comp['label'], font=("Arial", max(1, int(8 * canvas.zoom_factor))), fill="white", tags=rect_tags)
+            canvas.original_fonts[txt_id] = ("Arial", 8, "")
 
-            # Rysowanie małych kropek (pinów) dla wizualizacji portów
-            r = 3  # promień pinu
             for key in gate_data:
                 if (key.startswith('in_') or key == 'out' or key.startswith('out_')):
                     if isinstance(gate_data[key], dict) and 'x' in gate_data[key]:
                         px, py = gate_data[key]['x'], gate_data[key]['y']
-                        canvas.create_oval(
-                            px-r, py-r, px+r, py+r, outline="black")
                         
                         if key.startswith('in_'):
-                            canvas.create_text(
-                                px+r+2, py, text=gate_data[key].get('name', ''), font=("Arial", 7), fill="white")
+                            txt_id = canvas.create_text(
+                                px+5, py, text=gate_data[key].get('name', ''), font=("Arial", max(1, int(7 * canvas.zoom_factor))), fill="white")
                         else:
-                            canvas.create_text(
-                                px-r-2, py, text=gate_data[key].get('name', ''), font=("Arial", 7), fill="white")
+                            txt_id = canvas.create_text(
+                                px-5, py, text=gate_data[key].get('name', ''), font=("Arial", max(1, int(7 * canvas.zoom_factor))), fill="white")
+                        canvas.original_fonts[txt_id] = ("Arial", 7, "")
 
     def parse_json(self, json_string, target='main'):
         self.full_data = json.loads(json_string)
@@ -290,11 +378,7 @@ class App:
                     lambda e: canvas.scan_dragto(e.x, e.y, gain=1))
 
         def _sub_zoom(e):
-            delta = e.delta if hasattr(e, 'delta') else (
-                1 if getattr(e, 'num', 0) == 4 else -1)
-            scale = 1.1 if delta > 0 else 0.9
-            canvas.scale("all", e.x, e.y, scale, scale)
-            canvas.config(scrollregion=canvas.bbox("all"))
+            self._apply_zoom(canvas, e)
         canvas.bind("<MouseWheel>", _sub_zoom)
 
         self.COMPONENT_TO_CANVAS[comp_type] = canvas
@@ -306,7 +390,7 @@ class App:
         coords, components, connections = get_coordinates(
             components, connections, orders)
 
-        self.draw_wires(connections, comp_type, target_canvas=canvas,
+        self.draw_wires(connections, components, comp_type, target_canvas=canvas,
                         target_coords=coords)
         self.draw_components(
             components, comp_type, target_canvas=canvas, target_coords=coords)
@@ -436,9 +520,9 @@ class App:
     def Convert(self):
         self.inputText = self.editorFrame.text_area.get("1.0", tk.END)
         self.jsonString = str(self.passToJava(self.inputText))
+
         if self.handle_errors():
             return
-        print(self.jsonString)  # print for testing
 
         components, connections, orders = self.parse_json(self.jsonString)
         self.coords, components, connections = get_coordinates(
@@ -450,29 +534,64 @@ class App:
         self.COMPONENT_TO_ID_TO_TAG = {'main': {}}
 
         self.canvas.delete("all")
-        self.draw_wires(connections, 'main')
+        self.canvas.zoom_factor = 1.0
+        self.canvas.tk_images = {}
+        self.canvas.original_fonts = {}
+
+        self.draw_wires(connections, components, 'main')
         self.draw_components(components, 'main')
         self.canvas.config(scrollregion=self.canvas.bbox("all"))
 
         self.start_simulator('main')
 
 
-
     def handle_errors(self):
         print(self.jsonString)
         pattern = re.escape("\\nLine") + r'\s*([0-9]+:[0-9]+)'
-        matches = re.finditer(pattern, self.jsonString)
+        matches = list(re.finditer(pattern, self.jsonString))
 
         self.editorFrame.clear_errors()
 
         has_errors = False
+        error_messages = []
+
         for match in matches:
+            start = max(0, match.start() - 50)
+            end = min(len(self.jsonString), match.end() + 50)
+            context = self.jsonString[start:end]
+
+            error_messages.append(context.strip())
+
             line_info = match.group(1)
             self.editorFrame.highlight_error_line(int(line_info.split(':')[0]))
             has_errors = True
 
+        try:
+            parsed_data = json.loads(self.jsonString)
+            if isinstance(parsed_data, dict) and "error" in parsed_data:
+                has_errors = True
+                error_messages.append(parsed_data["error"])
+        except json.JSONDecodeError:
+            if not has_errors:
+                has_errors = True
+                error_messages.append(self.jsonString.strip())
+
+        if has_errors:
+            self.show_errors(error_messages)
+        else:
+            self.show_errors([])
+
         return has_errors
 
+
+    def show_errors(self, errors):
+        self.errorText.config(state=tk.NORMAL)
+        self.errorText.delete("1.0", tk.END)
+
+        for err in errors:
+            self.errorText.insert(tk.END, err + "\n\n")
+
+        self.errorText.config(state=tk.DISABLED)
 
 
     def _pan_start(self, event):
@@ -481,12 +600,35 @@ class App:
     def _pan_move(self, event):
         self.canvas.scan_dragto(event.x, event.y, gain=1)
 
+    def _apply_zoom(self, canvas, event):
+        delta = event.delta if hasattr(event, 'delta') else (1 if getattr(event, 'num', 0) == 4 else -1)
+        scale = 1.1 if delta > 0 else 0.9
+        
+        if not hasattr(canvas, 'zoom_factor'):
+            canvas.zoom_factor = 1.0
+            canvas.tk_images = {}
+            canvas.original_fonts = {}
+            
+        canvas.zoom_factor *= scale
+        canvas.scale("all", event.x, event.y, scale, scale)
+        
+        for item_id, font_data in canvas.original_fonts.items():
+            family, orig_size, weight = font_data
+            new_size = max(1, int(orig_size * canvas.zoom_factor))
+            font_str = (family, new_size, weight) if weight else (family, new_size)
+            canvas.itemconfig(item_id, font=font_str)
+            
+        for comp_type, orig_img in self.original_images.items():
+            base_w, base_h = 60, 40
+            new_w, new_h = max(1, int(base_w * canvas.zoom_factor)), max(1, int(base_h * canvas.zoom_factor))
+            scaled_img = orig_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            canvas.tk_images[comp_type] = ImageTk.PhotoImage(scaled_img)
+            canvas.itemconfig(f"gate_img_{comp_type}", image=canvas.tk_images[comp_type])
+
+        canvas.config(scrollregion=canvas.bbox("all"))
+
     def _zoom(self, event):
-        if event.delta > 0:
-            self.canvas.scale("all", event.x, event.y, 1.1, 1.1)
-        else:
-            self.canvas.scale("all", event.x, event.y, 0.9, 0.9)
-        self.canvas.config(scrollregion=self.canvas.bbox("all"))
+        self._apply_zoom(self.canvas, event)
 
 
 
