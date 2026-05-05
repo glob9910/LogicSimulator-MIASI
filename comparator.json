@@ -1,0 +1,198 @@
+{
+  "components": {
+    "compare": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "OUTPUT", "name": "eq"},
+        {"type": "OUTPUT", "name": "gt"},
+        {"type": "OUTPUT", "name": "lt"},
+        {"type": "XNOR", "name": "xnor1"},
+        {"type": "AND", "name": "and1"},
+        {"type": "NOT", "name": "not1"},
+        {"type": "AND", "name": "and2"},
+        {"type": "NOT", "name": "not2"}
+      ],
+      "connections": [
+        ["a", "xnor1"],
+        ["b", "xnor1"],
+        ["xnor1", "eq"],
+        ["b", "not1"],
+        ["a", "and1"],
+        ["not1", "and1"],
+        ["and1", "gt"],
+        ["a", "not2"],
+        ["not2", "and2"],
+        ["b", "and2"],
+        ["and2", "lt"]
+      ]
+    },
+    "and3": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "c"},
+        {"type": "OUTPUT", "name": "x"},
+        {"type": "AND", "name": "and1"},
+        {"type": "AND", "name": "and2"}
+      ],
+      "connections": [
+        ["a", "and2"],
+        ["b", "and2"],
+        ["and2", "and1"],
+        ["c", "and1"],
+        ["and1", "x"]
+      ]
+    },
+    "and4": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "c"},
+        {"type": "INPUT", "name": "d"},
+        {"type": "OUTPUT", "name": "x"},
+        {"type": "AND", "name": "and1"},
+        {"type": "AND", "name": "and2"},
+        {"type": "AND", "name": "and3"}
+      ],
+      "connections": [
+        ["a", "and2"],
+        ["b", "and2"],
+        ["c", "and3"],
+        ["d", "and3"],
+        ["and2", "and1"],
+        ["and3", "and1"],
+        ["and1", "x"]
+      ]
+    },
+    "or4": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "c"},
+        {"type": "INPUT", "name": "d"},
+        {"type": "OUTPUT", "name": "x"},
+        {"type": "OR", "name": "or1"},
+        {"type": "OR", "name": "or2"},
+        {"type": "OR", "name": "or3"}
+      ],
+      "connections": [
+        ["a", "or2"],
+        ["b", "or2"],
+        ["c", "or3"],
+        ["d", "or3"],
+        ["or2", "or1"],
+        ["or3", "or1"],
+        ["or1", "x"]
+      ]
+    },
+    "Comparator": {
+      "elements": [
+        {"type": "INPUT", "name": "A0"},
+        {"type": "INPUT", "name": "A1"},
+        {"type": "INPUT", "name": "A2"},
+        {"type": "INPUT", "name": "A3"},
+        {"type": "INPUT", "name": "B0"},
+        {"type": "INPUT", "name": "B1"},
+        {"type": "INPUT", "name": "B2"},
+        {"type": "INPUT", "name": "B3"},
+        {"type": "OUTPUT", "name": "eq"},
+        {"type": "OUTPUT", "name": "gt"},
+        {"type": "OUTPUT", "name": "lt"},
+        {"type": "compare", "name": "c0"},
+        {"type": "compare", "name": "c1"},
+        {"type": "compare", "name": "c2"},
+        {"type": "compare", "name": "c3"},
+        {"type": "and4", "name": "equal"},
+        {"type": "SIGNAL", "name": "g3"},
+        {"type": "SIGNAL", "name": "g2"},
+        {"type": "AND", "name": "and1"},
+        {"type": "and3", "name": "g1"},
+        {"type": "and4", "name": "g0"},
+        {"type": "or4", "name": "greater"},
+        {"type": "SIGNAL", "name": "l3"},
+        {"type": "SIGNAL", "name": "l2"},
+        {"type": "AND", "name": "and2"},
+        {"type": "and3", "name": "l1"},
+        {"type": "and4", "name": "l0"},
+        {"type": "or4", "name": "less"}
+      ],
+      "connections": [
+        ["A0", "c0.a"],
+        ["B0", "c0.b"],
+        ["A1", "c1.a"],
+        ["B1", "c1.b"],
+        ["A2", "c2.a"],
+        ["B2", "c2.b"],
+        ["A3", "c3.a"],
+        ["B3", "c3.b"],
+        ["c0.eq", "equal.a"],
+        ["c1.eq", "equal.b"],
+        ["c2.eq", "equal.c"],
+        ["c3.eq", "equal.d"],
+        ["c3.gt", "g3"],
+        ["c3.eq", "and1"],
+        ["c2.gt", "and1"],
+        ["and1", "g2"],
+        ["c3.eq", "g1.a"],
+        ["c2.eq", "g1.b"],
+        ["c1.gt", "g1.c"],
+        ["c3.eq", "g0.a"],
+        ["c2.eq", "g0.b"],
+        ["c1.eq", "g0.c"],
+        ["c0.gt", "g0.d"],
+        ["g3", "greater.a"],
+        ["g2", "greater.b"],
+        ["g1.x", "greater.c"],
+        ["g0.x", "greater.d"],
+        ["c3.lt", "l3"],
+        ["c3.eq", "and2"],
+        ["c2.lt", "and2"],
+        ["and2", "l2"],
+        ["c3.eq", "l1.a"],
+        ["c2.eq", "l1.b"],
+        ["c1.lt", "l1.c"],
+        ["c3.eq", "l0.a"],
+        ["c2.eq", "l0.b"],
+        ["c1.eq", "l0.c"],
+        ["c0.lt", "l0.d"],
+        ["l3", "less.a"],
+        ["l2", "less.b"],
+        ["l1.x", "less.c"],
+        ["l0.x", "less.d"],
+        ["equal.x", "eq"],
+        ["greater.x", "gt"],
+        ["less.x", "lt"]
+      ]
+    }
+  },
+  "main": {
+  "elements": [
+    {"type": "INPUT", "name": "A0"},
+    {"type": "INPUT", "name": "A1"},
+    {"type": "INPUT", "name": "A2"},
+    {"type": "INPUT", "name": "A3"},
+    {"type": "INPUT", "name": "B0"},
+    {"type": "INPUT", "name": "B1"},
+    {"type": "INPUT", "name": "B2"},
+    {"type": "INPUT", "name": "B3"},
+    {"type": "OUTPUT", "name": "eq"},
+    {"type": "OUTPUT", "name": "gt"},
+    {"type": "OUTPUT", "name": "lt"},
+    {"type": "Comparator", "name": "compare4"}
+  ],
+  "connections": [
+    ["A0", "compare4.A0"],
+    ["A1", "compare4.A1"],
+    ["A2", "compare4.A2"],
+    ["A3", "compare4.A3"],
+    ["B0", "compare4.B0"],
+    ["B1", "compare4.B1"],
+    ["B2", "compare4.B2"],
+    ["B3", "compare4.B3"],
+    ["compare4.eq", "eq"],
+    ["compare4.gt", "gt"],
+    ["compare4.lt", "lt"]
+  ]
+}
+}

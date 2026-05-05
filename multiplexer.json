@@ -1,0 +1,110 @@
+{
+  "components": {
+    "And3": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "c"},
+        {"type": "OUTPUT", "name": "x"},
+        {"type": "AND", "name": "and1"},
+        {"type": "AND", "name": "and2"}
+      ],
+      "connections": [
+        ["a", "and2"],
+        ["b", "and2"],
+        ["and2", "and1"],
+        ["c", "and1"],
+        ["and1", "x"]
+      ]
+    },
+    "Or4": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "c"},
+        {"type": "INPUT", "name": "d"},
+        {"type": "OUTPUT", "name": "x"},
+        {"type": "OR", "name": "or1"},
+        {"type": "OR", "name": "or2"},
+        {"type": "OR", "name": "or3"}
+      ],
+      "connections": [
+        ["a", "or2"],
+        ["b", "or2"],
+        ["c", "or3"],
+        ["d", "or3"],
+        ["or2", "or1"],
+        ["or3", "or1"],
+        ["or1", "x"]
+      ]
+    },
+    "Multiplexer": {
+      "elements": [
+        {"type": "INPUT", "name": "I0"},
+        {"type": "INPUT", "name": "I1"},
+        {"type": "INPUT", "name": "I2"},
+        {"type": "INPUT", "name": "I3"},
+        {"type": "INPUT", "name": "S0"},
+        {"type": "INPUT", "name": "S1"},
+        {"type": "OUTPUT", "name": "Y"},
+        {"type": "SIGNAL", "name": "s0_T"},
+        {"type": "SIGNAL", "name": "s0_F"},
+        {"type": "NOT", "name": "not1"},
+        {"type": "SIGNAL", "name": "s1_T"},
+        {"type": "SIGNAL", "name": "s1_F"},
+        {"type": "NOT", "name": "not2"},
+        {"type": "And3", "name": "g0"},
+        {"type": "And3", "name": "g1"},
+        {"type": "And3", "name": "g2"},
+        {"type": "And3", "name": "g3"},
+        {"type": "Or4", "name": "final"}
+      ],
+      "connections": [
+        ["S0", "s0_T"],
+        ["S0", "not1"],
+        ["not1", "s0_F"],
+        ["S1", "s1_T"],
+        ["S1", "not2"],
+        ["not2", "s1_F"],
+        ["I0", "g0.a"],
+        ["s0_F", "g0.b"],
+        ["s1_F", "g0.c"],
+        ["I1", "g1.a"],
+        ["s0_T", "g1.b"],
+        ["s1_F", "g1.c"],
+        ["I2", "g2.a"],
+        ["s0_F", "g2.b"],
+        ["s1_T", "g2.c"],
+        ["I3", "g3.a"],
+        ["s0_T", "g3.b"],
+        ["s1_T", "g3.c"],
+        ["g0.x", "final.a"],
+        ["g1.x", "final.b"],
+        ["g2.x", "final.c"],
+        ["g3.x", "final.d"],
+        ["final.x", "Y"]
+      ]
+    }
+  },
+  "main": {
+  "elements": [
+    {"type": "INPUT", "name": "I0"},
+    {"type": "INPUT", "name": "I1"},
+    {"type": "INPUT", "name": "I2"},
+    {"type": "INPUT", "name": "I3"},
+    {"type": "INPUT", "name": "S0"},
+    {"type": "INPUT", "name": "S1"},
+    {"type": "OUTPUT", "name": "Y"},
+    {"type": "Multiplexer", "name": "final"}
+  ],
+  "connections": [
+    ["I0", "final.I0"],
+    ["I1", "final.I1"],
+    ["I2", "final.I2"],
+    ["I3", "final.I3"],
+    ["S0", "final.S0"],
+    ["S1", "final.S1"],
+    ["final.Y", "Y"]
+  ]
+}
+}

@@ -1,0 +1,67 @@
+{
+  "components": {
+    "half_adder": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "OUTPUT", "name": "sum"},
+        {"type": "OUTPUT", "name": "carry"},
+        {"type": "XOR", "name": "xor1"},
+        {"type": "AND", "name": "and1"}
+      ],
+      "connections": [
+        ["a", "xor1"],
+        ["b", "xor1"],
+        ["xor1", "sum"],
+        ["a", "and1"],
+        ["b", "and1"],
+        ["and1", "carry"]
+      ]
+    },
+    "full_adder": {
+      "elements": [
+        {"type": "INPUT", "name": "a"},
+        {"type": "INPUT", "name": "b"},
+        {"type": "INPUT", "name": "cin"},
+        {"type": "OUTPUT", "name": "sum"},
+        {"type": "OUTPUT", "name": "cout"},
+        {"type": "half_adder", "name": "ha1"},
+        {"type": "half_adder", "name": "ha2"},
+        {"type": "OR", "name": "or1"}
+      ],
+      "connections": [
+        ["a", "ha1.a"],
+        ["b", "ha1.b"],
+        ["ha1.sum", "ha2.a"],
+        ["cin", "ha2.b"],
+        ["ha2.sum", "sum"],
+        ["ha1.carry", "or1"],
+        ["ha2.carry", "or1"],
+        ["or1", "cout"]
+      ]
+    }
+  },
+  "main": {
+  "elements": [
+    {"type": "INPUT", "name": "a0"},
+    {"type": "INPUT", "name": "a1"},
+    {"type": "INPUT", "name": "b0"},
+    {"type": "INPUT", "name": "b1"},
+    {"type": "OUTPUT", "name": "s0"},
+    {"type": "OUTPUT", "name": "s1"},
+    {"type": "OUTPUT", "name": "carry_out"},
+    {"type": "half_adder", "name": "bit0"},
+    {"type": "full_adder", "name": "bit1"}
+  ],
+  "connections": [
+    ["a0", "bit0.a"],
+    ["b0", "bit0.b"],
+    ["a1", "bit1.a"],
+    ["b1", "bit1.b"],
+    ["bit0.carry", "bit1.cin"],
+    ["bit0.sum", "s0"],
+    ["bit1.sum", "s1"],
+    ["bit1.cout", "carry_out"]
+  ]
+}
+}

@@ -20,6 +20,11 @@ def get_coordinates(components, connections, orders):
                 ranks[c['id']] = max(inputs) + 1
                 changed = True
 
+    last_rank = max(rank for id, rank in ranks.items())
+    for c in components:
+        if c['type'] == 'OUTPUT':
+            ranks[c['id']] = last_rank
+
     # Wirtualne bramki dla długich połączeń (Shared Virtual Nodes)
     new_components = components.copy()
     new_connections = []
@@ -111,20 +116,15 @@ def get_coordinates(components, connections, orders):
                                      'y': y + 10, 'occupied': False}
                 gate_data['out'] = {'x': x + 30, 'y': y}
             else:
-                # Instancja komponentu (np. kaczka) — liczymy piny z connections
-                in_pins = []
-                out_pins = []
-                for conn_data in connections:
-                    s, d = conn_data[0], conn_data[1]
-                    if '.' in d and d.split('.')[0] == c_id:
-                        in_pins.append(d.split('.')[1])
-                    if '.' in s and s.split('.')[0] == c_id:
-                        out_pins.append(s.split('.')[1])
+                # Instancja komponentu (np. kaczka) — liczymy piny z orders
+
+                c_id_type = next((item['type'] for item in components if item['id'] == c_id), None)
+
+                in_pins = orders[c_id_type]['INPUT']
+                out_pins = orders[c_id_type]['OUTPUT']
 
                 num_in = len(in_pins) if in_pins else 2
                 num_out = len(out_pins) if out_pins else 1
-
-                c_id_type = next((item['type'] for item in components if item['id'] == c_id), None)
 
                 rect_size = 40
                 spacing_in = rect_size / (num_in + 1)
